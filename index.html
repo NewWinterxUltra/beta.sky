@@ -663,6 +663,53 @@ select.fld option{background:var(--m3-surface-container-high);color:var(--m3-on-
  *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
 
+/* ===== motion layer: switching animations (spring) ===== */
+/* shared spring transitions for every pressable / toggleable control */
+.btn,.ico,.chip,.pa,.lact,.cc,.cbtn,#fab,.ibar .send,.seg button,.tabs2 button,#sidebar .snav{transition:transform var(--t) var(--ease-spx),border-radius var(--t) var(--ease-spx),background-color var(--t-fast) var(--ease-eff),color var(--t-fast) var(--ease-eff),flex-grow var(--t) var(--ease-spx),box-shadow var(--t-fast) var(--ease-eff)}
+/* shape morph needs real radii (999px is clamped, so the animation was invisible) */
+.btn{border-radius:26px}.btn:active{border-radius:14px}
+.btn.sm{border-radius:20px}.btn.sm:active{border-radius:12px}
+.ico{border-radius:22px}.ico:active{border-radius:12px}
+.chip{border-radius:12px}.chip.on{border-radius:20px}
+.vtop .chip{border-radius:11px}.vtop .chip.on{border-radius:18px}
+.pa,.lact{border-radius:20px}.pa:active,.lact:active{border-radius:12px}
+.cc{border-radius:32px}.cc:active{border-radius:18px}.cc.no{border-radius:32px}.cc.no:active{border-radius:20px}
+.cbtn{border-radius:26px}.cbtn:active{border-radius:16px}
+.ibar .send{border-radius:24px}.ibar .send:active{border-radius:14px}
+.seg button.on{border-radius:24px}
+/* bottom navigation: indicator grows from the centre with a spring */
+#tabbar button{display:grid;grid-template-rows:32px auto;grid-template-columns:auto;justify-content:center;justify-items:center;align-content:center;row-gap:4px}
+#tabbar button .ic{grid-area:1/1;position:relative;z-index:1;box-sizing:content-box;width:24px;height:24px;padding:0;border-radius:0;background:none;align-self:center;transition:transform var(--t) var(--ease-spx),color var(--t-fast) var(--ease-eff)}
+#tabbar button:before{content:"";display:block;grid-area:1/1;position:static;top:auto;left:auto;right:auto;width:64px;height:32px;border-radius:16px;background:var(--m3-secondary-container);transform:scaleX(.3);opacity:0;transition:transform var(--t) var(--ease-spx),opacity var(--t-fast) var(--ease-eff),border-radius var(--t) var(--ease-spx)}
+#tabbar button.on:before{content:"";display:block;position:static;top:auto;left:auto;width:64px;height:32px;border-radius:16px;background:var(--m3-secondary-container);transform:none;opacity:1}
+#tabbar button.on .ic{background:none;color:var(--m3-on-secondary-container);transform:scale(1.08)}
+#tabbar button:active:before{opacity:.55;transform:scaleX(.8)}
+#tabbar button.on:active:before{opacity:1;transform:scaleX(.88);border-radius:12px}
+#tabbar button:active .ic{border-radius:0}
+/* side rail */
+#sidebar .snav{border-radius:28px}#sidebar .snav:active{border-radius:16px;transform:scale(.98)}
+#sidebar .snav .ic{transition:transform var(--t) var(--ease-spx)}#sidebar .snav.on .ic{transform:scale(1.12)}
+/* segmented controls */
+.seg button{flex:1 1 0}.seg button.on{flex-grow:1.4}
+@supports selector(:has(*)){
+ .tabs2{position:relative}
+ .tabs2:before{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;border-radius:999px;background:var(--m3-secondary-container);transition:transform var(--t) var(--ease-spx);pointer-events:none}
+ .tabs2:has(button:nth-child(2).on):before{transform:translateX(100%)}
+ .tabs2 button{position:relative;z-index:1}
+ .tabs2 button.on{background:transparent;color:var(--m3-on-secondary-container)}
+ .tabs2 button+button{border-left:0}
+}
+/* profile tabs: underline slides in */
+.ptabs button{transition:color var(--t-fast) var(--ease-eff)}
+.ptabs button:after{content:"";position:absolute;left:25%;right:25%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--m3-primary);transform:scaleX(0);transition:transform var(--t) var(--ease-spx)}
+.ptabs button.on:after{left:25%;right:25%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--m3-primary);transform:scaleX(1)}
+/* screen switching: shared axis, direction set by setTab() */
+#views .view.on{animation:viewIn var(--t-slow) var(--ease-sp)}
+#views[data-dir="fwd"] .view.on{animation-name:viewInF}
+#views[data-dir="back"] .view.on{animation-name:viewInB}
+@keyframes viewIn{from{opacity:0;transform:translateY(12px) scale(.985)}}
+@keyframes viewInF{from{opacity:0;transform:translateX(32px)}}
+@keyframes viewInB{from{opacity:0;transform:translateX(-32px)}}
 </style>
 </head>
 <body>
@@ -1005,10 +1052,10 @@ try{var call=await sb.functions.invoke('anonet-auth',{body:{action:'admin_overvi
 if(call.error||!call.data||!call.data.counts)throw new Error('admin_overview_failed');
 var d=call.data;id('adUsers').textContent=d.counts.users;id('adPosts').textContent=d.counts.posts;id('adVideos').textContent=d.counts.videos;
 id('adPostList').innerHTML=(d.posts||[]).map(function(x){return '<div class="myp"><div class="bd"><div class="mt">@'+esc(x.author_username)+' · '+new Date(x.created_at).toLocaleString('ru-RU')+'</div><div class="tx">'+esc(x.content||'Публикация без текста')+'</div></div><button class="ico" data-act="admindelpost" data-id="'+esc(x.id)+'" title="Удалить публикацию">'+ic('trash')+'</button></div>';}).join('')||'<div class="empty">Публикаций пока нет</div>';
-id('adUserList').innerHTML=(d.users||[]).map(function(x){var until=x.ban_until?new Date(x.ban_until).getTime():0,banned=until>Date.now(),permabanned=banned&&until>Date.now()+50*365*24*3600000,muted=x.mute_until&&new Date(x.mute_until).getTime()>Date.now();return '<div class="myp"><div class="bd"><div class="mt">@'+esc(x.username)+' · '+new Date(x.created_at).toLocaleString('ru-RU')+'</div><div class="tx">'+esc(x.bio||'Без описания')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sm '+(banned&&!permabanned?'':'d')+'" data-act="adminban" data-id="'+esc(x.username)+'">'+(banned&&!permabanned?'Снять бан':'Бан 24 ч')+'</button><button class="btn sm '+(permabanned?'':'d')+'" data-act="adminpermaban" data-id="'+esc(x.username)+'">'+(permabanned?'Снять пермач':'Пермач 100 лет')+'</button><button class="btn sm" data-act="adminmute" data-id="'+esc(x.username)+'">'+(muted?'Снять мут':'Мут 24 ч')+'</button>'+(x.username.toLowerCase()!==me().toLowerCase()?'<button class="btn sm d" data-act="admindeluser" data-id="'+esc(x.username)+'">Удалить аккаунт</button>':'')+'</div></div></div>';}).join('')||'<div class="empty">Участников пока нет</div>';
+id('adUserList').innerHTML=(d.users||[]).map(function(x){var until=x.ban_until?new Date(x.ban_until).getTime():0,banned=until>Date.now(),permabanned=banned&&until>Date.now()+50*365*24*3600000,muted=x.mute_until&&new Date(x.mute_until).getTime()>Date.now();return '<div class="myp"><div class="bd"><div class="mt">@'+esc(x.username)+' · '+new Date(x.created_at).toLocaleString('ru-RU')+'</div><div class="tx">'+esc(x.bio||'Без описания')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sm '+(banned&&!permabanned?'':'d')+'" data-act="adminban" data-id="'+esc(x.username)+'">'+(banned&&!permabanned?'Снять бан':'Бан 24 ч')+'</button><button class="btn sm '+(permabanned?'':'d')+'" data-act="adminpermaban" data-id="'+esc(x.username)+'">'+(permabanned?'Снять пермач':'Пермач 100 лет')+'</button><button class="btn sm" data-act="adminmute" data-id="'+esc(x.username)+'">'+(muted?'Снять мут':'Мут 24 ч')+'</button></div></div></div>';}).join('')||'<div class="empty">Участников пока нет</div>';
 }catch(e){id('adPostList').innerHTML='<div class="empty">Не удалось загрузить панель. Проверь сессию и права администратора.</div>';}}
 var TIT={feed:['Лента','Что происходит в сети'],video:['net.moments','Твои моменты'],chats:['Сообщения','Чаты и звонки'],profile:['Профиль','Настройки и статистика'],admin:['Админ-панель','Управление ANONET']};
-function setTab(t){S.tab=t;pauseVids();closeRoom();hap();
+function setTab(t){try{var _o=['feed','video','chats','profile','admin'],_d=_o.indexOf(t)-_o.indexOf(S.tab);if(_d)id('views').dataset.dir=_d<0?'back':'fwd';}catch(e){}S.tab=t;pauseVids();closeRoom();hap();
 qa('[data-go]').forEach(function(n){n.classList.toggle('on',n.dataset.go===t);});
 qa('.view').forEach(function(v){v.classList.remove('on');});id('v-'+t).classList.add('on');
 var brand=id('tbBrand'),tit=id('tbTitle');
@@ -1590,7 +1637,7 @@ id('cqSel').onchange=function(){S.call.q=this.value;Relay.setQ(S.call.q);try{loc
 id('lbClose').onclick=function(e){e.stopPropagation();unzoom();};id('lightbox').onclick=function(e){if(e.target===id('lightbox'))unzoom();};
 document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;if(id('lightbox').classList.contains('on')){unzoom();return;}if(id('dlg').classList.contains('on')){dclose({ok:false});return;}if(id('story').classList.contains('on')){closeStory();return;}if(sheetOn){closeSheet();return;}if(S.roomOpen){closeRoom();return;}});
 document.addEventListener('click',function(e){if(e.target.closest('a.textlink'))return;var g=e.target.closest('[data-go]');if(g)return;var t=e.target.closest('[data-act]');if(!t)return;var a=t.dataset.act,i=t.dataset.id;
-if(a==='adminban'){moderateUser(i,'ban',!(t.textContent.indexOf('Снять бан')>=0));return;}if(a==='adminpermaban'){moderateUser(i,'permaban',!(t.textContent.indexOf('Снять пермач')>=0));return;}if(a==='adminmute'){moderateUser(i,'mute',!(t.textContent.indexOf('Снять мут')>=0));return;}if(a==='admindeluser'){if(!S.user||S.user.role!=='admin'||i.toLowerCase()===me().toLowerCase())return;dlg({title:'Удалить аккаунт @'+i+'?',text:'Аккаунт будет удалён без возможности восстановления. Также удалятся его публикации, комментарии, лайки, репосты, видео, истории, сообщения и связанные медиафайлы.',ok:'Удалить навсегда',danger:true}).then(async function(r){if(!r||!r.ok)return;var b=t;b.disabled=true;var d=await sb.functions.invoke('anonet-auth',{body:{action:'admin_delete_user',target_username:i}});if(d.error||!d.data||!d.data.ok){b.disabled=false;var code=d.data&&d.data.error;toast(code==='cannot_delete_admin'?'Нельзя удалить аккаунт администратора':code==='cannot_delete_self'?'Нельзя удалить собственный аккаунт':'Не удалось удалить аккаунт. Проверь права и соединение.','err');return;}toast(d.data.media_cleanup_warning?'Аккаунт удалён, но некоторые медиафайлы не удалось очистить':'Аккаунт @'+i+' и связанные данные удалены',d.data.media_cleanup_warning?'warn':'ok');loadAdmin();loadFeed(true);loadVideos();loadUsers();});return;}if(a==='admindelpost'){if(!S.user||S.user.role!=='admin')return;dlg({title:'Удалить публикацию?',text:'Публикация будет удалена из общей ленты.',ok:'Удалить',danger:true}).then(async function(r){if(!r||!r.ok)return;var d=await sb.functions.invoke('anonet-auth',{body:{action:'admin_delete_post',post_id:i}});if(d.error||!d.data||!d.data.ok)toast('Не удалось удалить публикацию: нет прав или ошибка сервера','err');else{toast('Публикация удалена','ok');loadAdmin();loadFeed(true);}});return;}
+if(a==='adminban'){moderateUser(i,'ban',!(t.textContent.indexOf('Снять бан')>=0));return;}if(a==='adminpermaban'){moderateUser(i,'permaban',!(t.textContent.indexOf('Снять пермач')>=0));return;}if(a==='adminmute'){moderateUser(i,'mute',!(t.textContent.indexOf('Снять мут')>=0));return;}if(a==='admindelpost'){if(!S.user||S.user.role!=='admin')return;dlg({title:'Удалить публикацию?',text:'Публикация будет удалена из общей ленты.',ok:'Удалить',danger:true}).then(async function(r){if(!r||!r.ok)return;var d=await sb.functions.invoke('anonet-auth',{body:{action:'admin_delete_post',post_id:i}});if(d.error||!d.data||!d.data.ok)toast('Не удалось удалить публикацию: нет прав или ошибка сервера','err');else{toast('Публикация удалена','ok');loadAdmin();loadFeed(true);}});return;}
 if(a==='logout'){if(S.mustChangePassword){toast('Сначала задай новый пароль','warn');editProfile(true);return;}closeSheet();dlg({title:'Выйти из anon.net?',text:guest()?'Гостевая сессия закроется.':(S.user.anon?'Анонимный аккаунт живёт только в этом браузере. Без пароля вход обратно невозможен.':'Данные останутся в сети.'),ok:'Выйти',danger:true}).then(function(r){if(r&&r.ok)bye(false);});return;}
 if(a==='guestregister'){bye(true);setTimeout(function(){var t=qs('.atab[data-m="reg"]');if(t)t.click();},80);return;}if(a==='guestlogin'){bye(true);anon();return;}
 if(a==='refeed'){loadFeed(true);return;}if(a==='reusers'){loadUsers();return;}
