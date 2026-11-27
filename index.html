@@ -1012,6 +1012,25 @@ var i=id('dlgInput');if(o.input){i.classList.add('on');i.value=o.value||'';i.pla
 var ok=id('dlgOk');ok.textContent=o.ok||'ОК';ok.className='btn '+(o.danger?'d':'p');id('dlgCancel').textContent=o.cancel||'Отмена';id('dlgCancel').style.display=o.hideCancel?'none':'';
 id('dlg').classList.add('on');hap();setTimeout(function(){if(o.input)i.focus();},80);});}
 function dclose(v){id('dlg').classList.remove('on');var r=dres;dres=null;if(r)r(v);}
+var recoveryBusy=false;
+sb.auth.onAuthStateChange(function(event,session){
+ if(event!=='PASSWORD_RECOVERY'||recoveryBusy)return;
+ recoveryBusy=true;
+ setTimeout(async function(){
+  try{
+   var d=await dlg({title:'Новый пароль',text:'Придумай новый пароль длиной не менее 8 символов.',input:true,ph:'Новый пароль',ok:'Сохранить'});
+   if(!d||!d.ok){await sb.auth.signOut();aerr('Сброс пароля отменён. Запроси новую ссылку.');return;}
+   var np=String(d.value||'');
+   if(np.length<8){aerr('Пароль должен быть не короче 8 символов. Запроси новую ссылку и повтори.');await sb.auth.signOut();return;}
+   var changed=await sb.auth.updateUser({password:np});
+   if(changed.error)throw changed.error;
+   await sb.auth.signOut();
+   aerr('Пароль изменён. Теперь войди с новым паролем.');
+   toast('Пароль успешно изменён','ok');
+  }catch(e){aerr('Не удалось изменить пароль. Запроси новую ссылку и попробуй снова.');}
+  finally{recoveryBusy=false;}
+ },250);
+});
 var sheetOn=false;
 function sheet(title,html,onOpen){id('sheetTitle').textContent=title;id('sheetBody').innerHTML=html;id('sheetPanel').style.transform='';id('sheet').classList.add('on');sheetOn=true;hap();if(onOpen)onOpen(id('sheetBody'));}
 function closeSheet(){if(!sheetOn)return;stopCircleRec(true);sheetOn=false;id('sheet').classList.remove('on');id('sheetBody').innerHTML='';S.drawer=null;}
