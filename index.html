@@ -1173,8 +1173,8 @@ function findPost(i){for(var k=0;k<S.posts.length;k++)if(S.posts[k].id===i)retur
 function acts(p){var l=!!S.likes[p.id],r=!!S.reposts[p.id];
 return '<button class="pa'+(l?' liked':'')+'" data-act="like" data-id="'+esc(p.id)+'">'+ic('heart','s'+(l?' fill':''))+'<span>'+(p.likes||0)+'</span></button>'+
 '<button class="pa" data-act="open" data-id="'+esc(p.id)+'">'+ic('chat','s')+'<span>'+(S.cc[p.id]||0)+'</span></button>'+
-'<button class="pa'+(r?' reposted':'')+'" data-act="repost" data-id="'+esc(p.id)+'">'+ic('repost','s')+'<span>'+(p.reposts||0)+'</span></button>'+
-'<button class="pa right" data-act="share" data-id="'+esc(p.id)+'">'+ic('share','s')+'</button>';}
+'<button class="pa'+(r?' reposted':'')+'" data-act="repost" data-id="'+esc(p.id)+'" title="'+(r?'Убрать репост':'Сделать репост')+'">'+ic('repost','s')+'<span>'+(p.reposts||0)+'</span></button>'+
+'<button class="pa right" data-act="share" data-id="'+esc(p.id)+'">'+ic('share','s')+'<span></span></button>';}
 function postHTML(p){var mine=!guest()&&p.author_username===me();
 return '<article class="post reveal" data-post="'+esc(p.id)+'">'+(p.repost_from?'<div class="rtag">'+ic('repost','s')+'репост от @'+esc(p.repost_from)+'</div>':'')+
 '<div class="ph"><div data-act="uprofile" data-id="'+esc(p.author_username)+'">'+av(p.author_username,p.author_avatar,'a40')+'</div>'+
@@ -1195,8 +1195,29 @@ try{if(was){var d=await sb.from('post_likes').delete().eq('post_id',i).eq('usern
 else{var n=await sb.from('post_likes').insert([{post_id:i,username:me()}]);if(n.error&&n.error.code!=='23505')throw n.error;}
 var c=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',i);var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;if(typeof c.count==='number'){p.likes=c.count;paintPost(i);}}
 catch(e){toast('Лайк не сохранился','err');}}
-async function repost(i){if(!need())return;if(S.reposts[i]){toast('Ты уже репостил это','warn');return;}
-var p=findPost(i);if(!p)return;S.reposts[i]=1;p.reposts=(p.reposts||0)+1;paintPost(i);hap(12);
+async function repost(i){if(!need())return;var p=findPost(i);if(!p)return;
+if(S.reposts[i]){
+var ok=await dlg({title:'Убрать репост?',text:'Твоя копия публикации исчезнет из ленты.',ok:'Убрать репост',danger:true});if(!ok||!ok.ok)return;
+delete S.reposts[i];p.reposts=Math.max(0,(p.reposts||0)-1);paintPost(i);
+try{
+var d=await sb.from('post_reposts').delete().eq('post_id',i).eq('username',me());if(d.error)throw d.error;
+var origin=p.repost_from||p.author_username;
+var q=await sb.from('posts').select('id').eq('author_username',me()).eq('repost_from',origin).eq('content',p.content||'').eq('image',p.image||'').order('created_at',{ascending:false}).limit(1).maybeSingle();
+if(q.error)throw q.error;
+if(q.data&&q.data.id){
+var cid=q.data.id;
+var dc=await sb.from('comments').delete().eq('post_id',cid);if(dc.error)throw dc.error;
+var dl=await sb.from('post_likes').delete().eq('post_id',cid);if(dl.error)throw dl.error;
+var dr=await sb.from('post_reposts').delete().eq('post_id',cid);if(dr.error)throw dr.error;
+var dp=await sb.from('posts').delete().eq('id',cid).eq('author_username',me());if(dp.error)throw dp.error;
+}
+var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;
+Snd.ok();toast('Репост убран','ok');loadFeed(true);if(S.tab==='profile')loadProfile();
+}catch(e){S.reposts[i]=1;p.reposts=(p.reposts||0)+1;paintPost(i);toast('Не удалось убрать репост','err');}
+return;
+}
+if(p.author_username===me()&&!p.repost_from){toast('Свою публикацию репостить не нужно','warn');return;}
+S.reposts[i]=1;p.reposts=(p.reposts||0)+1;paintPost(i);hap(12);
 try{var n=await sb.from('post_reposts').insert([{post_id:i,username:me()}]);if(n.error)throw n.error;
 var copy=await sb.from('posts').insert([{author_username:me(),author_avatar:S.user.avatar||'',content:p.content||'',image:p.image||'',repost_from:p.repost_from||p.author_username,likes:0,reposts:0}]);if(copy.error)throw copy.error;
 var c=await sb.from('post_reposts').select('*',{count:'exact',head:true}).eq('post_id',i);var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;if(typeof c.count==='number'){p.reposts=c.count;}
