@@ -1057,7 +1057,14 @@ try{
   if(!ask||!ask.ok){await sb.auth.signOut();aerr('Без подтверждённой почты войти нельзя.');b.disabled=false;return;}
   var bindEmail=(ask.value||'').trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bindEmail)){await sb.auth.signOut();aerr('Укажи корректный email.');b.disabled=false;return;}
-  var bind=await sb.functions.invoke('anonet-auth',{body:{action:'link_email',email:bindEmail,password:p}});
+  var bindPassword=p;
+  if(bindPassword.length<8){
+   var choosePass=await dlg({title:'Задай новый пароль',text:'Для привязанного email нужен пароль не короче 8 символов. Введи новый пароль — он будет использоваться при следующем входе.',input:true,ph:'Новый пароль',ok:'Продолжить'});
+   if(!choosePass||!choosePass.ok){await sb.auth.signOut();aerr('Привязка почты отменена.');b.disabled=false;return;}
+   bindPassword=String(choosePass.value||'');
+   if(bindPassword.length<8){await sb.auth.signOut();aerr('Пароль должен быть не короче 8 символов.');b.disabled=false;return;}
+  }
+  var bind=await sb.functions.invoke('anonet-auth',{body:{action:'link_email',email:bindEmail,password:bindPassword}});
   await sb.auth.signOut();
   if(bind.error||!bind.data||!bind.data.invited){var bindCode=bind.data&&bind.data.error;aerr(bindCode==='email_in_use_or_invite_failed'?'Этот email уже используется или письмо не удалось отправить':'Не удалось привязать почту. Попробуй другой адрес или повтори позже.');b.disabled=false;return;}
   aerr('Письмо отправлено! Подтверди почту по ссылке, затем войди снова с тем же ником и паролем.');
