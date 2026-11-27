@@ -1071,6 +1071,19 @@ try{
   aerr('Письмо отправлено! Подтверди почту по ссылке, затем войди снова с тем же ником и паролем.');
   toast('Проверь почту для подтверждения','ok');b.disabled=false;return;
  }
+ var otpEmail=String(ss.user&&ss.user.email||'').trim().toLowerCase();
+ if(!otpEmail||otpEmail.endsWith('@accounts.anonet.invalid')||!ss.user.email_confirmed_at){await sb.auth.signOut({scope:'local'});aerr('Для входа нужна подтверждённая почта.');b.disabled=false;return;}
+ await sb.auth.signOut({scope:'local'});
+ var otpSend=await sb.auth.signInWithOtp({email:otpEmail,options:{shouldCreateUser:false}});
+ if(otpSend.error){aerr(otpSend.error.message&&otpSend.error.message.toLowerCase().includes('rate')?'Код уже отправлялся недавно. Подожди минуту и попробуй снова.':'Не удалось отправить код на почту. Проверь настройки email в Supabase.');b.disabled=false;return;}
+ var maskedEmail=otpEmail.replace(/^(.{2})[^@]*(@.*)$/,'$1••••$2');
+ var otpAsk=await dlg({title:'Проверь почту',text:'Мы отправили одноразовый код на '+maskedEmail+'. Введи 6 цифр, чтобы завершить вход.',input:true,ph:'123456',ok:'Подтвердить код'});
+ if(!otpAsk||!otpAsk.ok){aerr('Вход не завершён: введи код из письма.');b.disabled=false;return;}
+ var otpCode=String(otpAsk.value||'').replace(/\s/g,'');
+ if(!/^\d{6}$/.test(otpCode)){aerr('Код должен состоять из 6 цифр.');b.disabled=false;return;}
+ var otpCheck=await sb.auth.verifyOtp({email:otpEmail,token:otpCode,type:'email'});
+ if(otpCheck.error||!otpCheck.data||!otpCheck.data.user){aerr('Неверный или просроченный код. Запроси новый и попробуй ещё раз.');b.disabled=false;return;}
+ ss=otpCheck.data;
  var pr=await sb.from('users').select('id,username,bio,avatar,created_at,music_url,music_title,ban_until,mute_until').ilike('username',u).maybeSingle();
  if(pr.error||!pr.data)throw new Error('profile_missing');
  S.user=Object.assign({},pr.data,{auth_user_id:ss.user.id,anon:false,guest:false});var roleRow=await sb.from('account_roles').select('role').eq('auth_user_id',ss.user.id).maybeSingle();if(roleRow.data)S.user.role=roleRow.data.role;save();Snd.ok();toast(amode==='reg'?'Аккаунт создан':'С возвращением, @'+u,'ok');await enter();
