@@ -1019,12 +1019,13 @@ sb.auth.onAuthStateChange(function(event,session){
  setTimeout(async function(){
   try{
    var d=await dlg({title:'Новый пароль',text:'Придумай новый пароль длиной не менее 8 символов.',input:true,ph:'Новый пароль',ok:'Сохранить'});
-   if(!d||!d.ok){await sb.auth.signOut();aerr('Сброс пароля отменён. Запроси новую ссылку.');return;}
+   if(!d||!d.ok){await sb.auth.signOut();bye(true);aerr('Сброс пароля отменён. Запроси новую ссылку.');return;}
    var np=String(d.value||'');
-   if(np.length<8){aerr('Пароль должен быть не короче 8 символов. Запроси новую ссылку и повтори.');await sb.auth.signOut();return;}
+   if(np.length<8){aerr('Пароль должен быть не короче 8 символов. Запроси новую ссылку и повтори.');await sb.auth.signOut();bye(true);return;}
    var changed=await sb.auth.updateUser({password:np});
    if(changed.error)throw changed.error;
    await sb.auth.signOut();
+   bye(true);
    aerr('Пароль изменён. Теперь войди с новым паролем.');
    toast('Пароль успешно изменён','ok');
   }catch(e){aerr('Не удалось изменить пароль. Запроси новую ссылку и попробуй снова.');}
