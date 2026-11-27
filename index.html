@@ -1193,7 +1193,7 @@ if(was){delete S.likes[i];p.likes=Math.max(0,(p.likes||0)-1);}else{S.likes[i]=1;
 paintPost(i);var b=qs('[data-post="'+i+'"] [data-act="like"]');if(b){b.classList.add('pop');setTimeout(function(){b.classList.remove('pop');},420);}
 try{if(was){var d=await sb.from('post_likes').delete().eq('post_id',i).eq('username',me());if(d.error)throw d.error;}
 else{var n=await sb.from('post_likes').insert([{post_id:i,username:me()}]);if(n.error&&n.error.code!=='23505')throw n.error;}
-var c=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',i);var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;if(typeof c.count==='number'){p.likes=c.count;paintPost(i);}}
+var c=await sb.from('post_likes').select('*',{count:'exact',head:true}).eq('post_id',i);if(typeof c.count==='number'){p.likes=c.count;paintPost(i);}}
 catch(e){toast('Лайк не сохранился','err');}}
 async function repost(i){if(!need())return;var p=findPost(i);if(!p)return;
 if(S.reposts[i]){
@@ -1211,7 +1211,7 @@ var dl=await sb.from('post_likes').delete().eq('post_id',cid);if(dl.error)throw 
 var dr=await sb.from('post_reposts').delete().eq('post_id',cid);if(dr.error)throw dr.error;
 var dp=await sb.from('posts').delete().eq('id',cid).eq('author_username',me());if(dp.error)throw dp.error;
 }
-var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;
+
 Snd.ok();toast('Репост убран','ok');loadFeed(true);if(S.tab==='profile')loadProfile();
 }catch(e){S.reposts[i]=1;p.reposts=(p.reposts||0)+1;paintPost(i);toast('Не удалось убрать репост','err');}
 return;
@@ -1220,7 +1220,7 @@ if(p.author_username===me()&&!p.repost_from){toast('Свою публикаци�
 S.reposts[i]=1;p.reposts=(p.reposts||0)+1;paintPost(i);hap(12);
 try{var n=await sb.from('post_reposts').insert([{post_id:i,username:me()}]);if(n.error)throw n.error;
 var copy=await sb.from('posts').insert([{author_username:me(),author_avatar:S.user.avatar||'',content:p.content||'',image:p.image||'',repost_from:p.repost_from||p.author_username,likes:0,reposts:0}]);if(copy.error)throw copy.error;
-var c=await sb.from('post_reposts').select('*',{count:'exact',head:true}).eq('post_id',i);var sync=await sb.rpc('anonet_sync_post_counts',{p_post_id:i});if(sync.error)throw sync.error;if(typeof c.count==='number'){p.reposts=c.count;}
+var c=await sb.from('post_reposts').select('*',{count:'exact',head:true}).eq('post_id',i);if(typeof c.count==='number'){p.reposts=c.count;}
 Snd.ok();toast('Репост опубликован','ok');loadFeed(true);}
 catch(e){delete S.reposts[i];p.reposts=Math.max(0,(p.reposts||0)-1);paintPost(i);toast('Репост не удался','err');}}
 async function delPost(i){var p=findPost(i);if(!p||p.author_username!==me())return;
