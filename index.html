@@ -1720,9 +1720,9 @@ async function boot(){try{bind();paintSound();var saved=null;try{saved=JSON.pars
 if(saved&&saved.guest){S.user={id:null,username:'guest',bio:'Гость',avatar:'',guest:true,anon:false};await enter();window.__OK=true;id('boot').classList.remove('on');return;}
 var inviteFlow=/(?:[?&#])type=(?:invite|recovery)(?:&|$)/i.test(location.hash+' '+location.search);
 var authState=await sb.auth.getSession(),session=authState&&authState.data&&authState.data.session;
-if(session&&session.user){var r=await sb.from('users').select('id,username,bio,avatar,created_at,music_url,music_title,ban_until,mute_until').eq('auth_user_id',session.user.id).maybeSingle();
+if(session&&session.user){if(!session.user.email||session.user.email.endsWith('@accounts.anonet.invalid')||!session.user.email_confirmed_at){await sb.auth.signOut();session=null;}else{var r=await sb.from('users').select('id,username,bio,avatar,created_at,music_url,music_title,ban_until,mute_until').eq('auth_user_id',session.user.id).maybeSingle();
 if(r.data){S.user=Object.assign({},r.data,{auth_user_id:session.user.id,anon:false,guest:false});var rr=await sb.from('account_roles').select('role').eq('auth_user_id',session.user.id).maybeSingle();if(rr.data)S.user.role=rr.data.role;if(inviteFlow){S.mustChangePassword=true;localStorage.setItem('an_must_change_password','1');}save();await enter();window.__OK=true;id('boot').classList.remove('on');return;}
-await sb.auth.signOut();}
+await sb.auth.signOut();}}
 localStorage.removeItem('anon_net_user');S.user=null;id('auth').classList.add('on');preview();window.__OK=true;id('boot').classList.remove('on');
 }catch(err){window.__ERR=String((err&&err.message)||err);try{id('auth').classList.add('on');id('boot').classList.remove('on');}catch(e){}window.__OK=true;}}
 boot();
